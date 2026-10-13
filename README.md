@@ -55,20 +55,54 @@ test automation, needs Windows.
 ## What test tools can see: UI Automation report
 
 ```bat
-powershell -ExecutionPolicy Bypass -File tools\uia_report_nova.ps1 -Exe app\bin\OrderDesk.exe
+tools\uia_report.bat -Exe app\bin\OrderDesk.exe          :: both views, full element tree
+tools\uia_report.bat -ProcessName ClientApp -Quiet        :: attach to a running app (e.g. after signing in), summaries only
 ```
 
-The script lists every element the app exposes to UI Automation and grades each interactive control:
+```bash
+tools/uia_report.sh -Exe app/bin/OrderDesk.exe            # same from Git Bash
+```
+
+The report shows the app through the two UI Automation clients that desktop test drivers use:
+
+| View | Tool | Same as |
+|---|---|---|
+| Native UIA3 (COM) | `tools\bin\UiaReport.exe` (C#, `tools/UiaReport.cs`) | Inspect.exe, WinAppDriver / Appium "Windows" driver, FlaUI |
+| NovaWindows | `tools\uia_report_nova.ps1` | Appium NovaWindows driver (managed `System.Windows.Automation` in `powershell.exe`) |
+
+Each view lists every element with its control type, AutomationId, name and class. The native view also shows
+the patterns a driver can use (Invoke, Value, Toggle, SelectionItem…) and current values; password fields
+always show `***`. Interactive controls are graded:
 
 | Grade | Meaning |
 |---|---|
-| good | Stable AutomationId |
+| good | Stable AutomationId (WinForms ids that are only window handles do not count) |
 | fair | Name only |
-| poor | Neither |
-| opaque | Custom-drawn pane |
+| poor | Neither: only position-based XPath or image recognition can reach it |
+| opaque | A pane with no name and no children: custom-drawn content UI Automation cannot see |
 
-It also prints a readiness percentage. It is read-only and can attach to a running app
-(`-ProcessName`, `-WindowTitle`), so the same script serves for a first look at a client's app.
+Each view ends with a readiness percentage. The tools are read-only: they never click or type. With `-Exe` they
+start the app and close it afterwards. Other options, the same for both views:
+
+- `-Arguments`
+- `-WaitSeconds`
+- `-MaxDepth`
+- `-KeepOpen`
+- `-Quiet`
+- `-Csv FILE` and `-Json FILE`: run one view on its own, for example `tools\bin\UiaReport.exe -Exe … -Json reports\native.json`
+
+`UiaReport.exe` is built on first use by `tools\build_tools.bat` (or `build_tools.sh`) with the C# compiler that
+ships with Windows. `make_interop.ps1` generates the UI Automation interop assembly from Windows' own
+`UIAutomationCore.dll`, so nothing is downloaded.
+
+Order Desk today:
+
+```
+Native UIA3 view  - readiness 71%  (31 interactive: 17 good, 10 name only, 4 unlocatable; 1 opaque pane)
+NovaWindows view  - readiness 35%  (17 interactive: 0 good, 12 name only, 5 unlocatable; 6 opaque panes)
+```
+
+In the NovaWindows view, the menu bar, toolbar and status bar are opaque panes. Their items cannot be found at all.
 
 ## Findings so far (13 Oct 2026)
 
@@ -101,11 +135,9 @@ blocks until the dialog closes. Drivers must click with the mouse, or post the c
 ## Status
 
 Built so far:
-- the app
-- the build script
-- the NovaWindows-view report
+- the app, with build and launch scripts
+- the UI Automation report in both views
 
 Next:
-- a native UIA3 report tool
 - innoHarmony screen objects and tests for Order Desk (`config/apps.yaml`, `screens/`, `tests/`)
 - run scripts
