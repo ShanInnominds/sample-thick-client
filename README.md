@@ -31,12 +31,26 @@ Business rules:
 
 ## Build and run
 
+Build and launch in one step:
+
 ```bat
-app\build.bat                 :: -> app\bin\OrderDesk.exe
-app\bin\OrderDesk.exe
+start_order_desk.bat                        :: Windows (cmd / PowerShell)
+start_order_desk.bat --password secret      :: sign-in password for this run
+start_order_desk.bat --no-build             :: launch the existing build
 ```
 
-To sign in, use any user name. The password is `ORDERDESK_PASSWORD` if that is set, otherwise `orderdesk`.
+```bash
+./start_order_desk.sh                       # Git Bash on Windows; Linux / macOS through Mono (viewing only)
+./start_order_desk.sh --password secret --no-build
+```
+
+To build only, run `app\build.bat` or `bash app/build.sh`. The output is `app\bin\OrderDesk.exe`. A build takes
+about a second, so the start scripts always rebuild first and the app never lags behind the source.
+
+To sign in, use any user name. The password is `--password`, else `ORDERDESK_PASSWORD`, else `orderdesk`.
+
+On Linux and macOS the app runs under Mono (install it first) for viewing only. UI Automation, and so desktop
+test automation, needs Windows.
 
 ## What test tools can see: UI Automation report
 
